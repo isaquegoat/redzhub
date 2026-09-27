@@ -895,3 +895,706 @@ function MainUI.Build()
         SwitchPage = switchPage,
     }
 end
+--// ============================================================
+--// SISTEMAS DE FARM
+--// ============================================================
+
+local Systems = {}
+
+--// ---------- FarmLevel ----------
+Systems.FarmLevel = {}
+function Systems.FarmLevel.Start()
+    ConnectionManager:Start("FarmLevel", function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health <= 0 then return end
+
+        local closest, dist = nil, 200
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") and m ~= char then
+                local h = m:FindFirstChildOfClass("Humanoid")
+                local hrp = m:FindFirstChild("HumanoidRootPart")
+                if h and hrp and h.Health > 0
+                and Players:GetPlayerFromCharacter(m) == nil then
+                    local d = Utility.Distance(Utility.GetHRP(), hrp)
+                    if d < dist then closest, dist = m, d end
+                end
+            end
+        end
+        if closest then
+            local hrp = Utility.GetHRP()
+            local target = closest:FindFirstChild("HumanoidRootPart")
+            if hrp and target then
+                hrp.CFrame = CFrame.new(target.Position + Vector3.new(0, 0, 6), target.Position)
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then pcall(function() tool:Activate() end) end
+            end
+        end
+    end, 0.2)
+end
+function Systems.FarmLevel.Stop() ConnectionManager:Stop("FarmLevel") end
+
+--// ---------- FarmChest ----------
+Systems.FarmChest = {}
+function Systems.FarmChest.Start()
+    ConnectionManager:Start("FarmChest", function()
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        local closest, dist = nil, Config.FarmChest.MaxDistance
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("BasePart") then
+                local n = m.Name:lower()
+                if n:find("chest") or n:find("baú") then
+                    local d = Utility.Distance(hrp, m)
+                    if d < dist then closest, dist = m, d end
+                end
+            end
+        end
+        if closest then
+            hrp.CFrame = CFrame.new(closest.Position + Vector3.new(0, 0, 3))
+            task.wait(0.3)
+            local prompt = closest:FindFirstChildOfClass("ProximityPrompt")
+            if prompt then
+                pcall(function() fireproximityprompt(prompt) end)
+            end
+        end
+    end, 0.3)
+end
+function Systems.FarmChest.Stop() ConnectionManager:Stop("FarmChest") end
+
+--// ---------- AutoQuest ----------
+Systems.AutoQuest = {}
+function Systems.AutoQuest.Start()
+    ConnectionManager:Start("AutoQuest", function()
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") then
+                local n = m.Name:lower()
+                if n:find("quest") or n:find("mission") then
+                    local hrpN = m:FindFirstChild("HumanoidRootPart")
+                    if hrpN then
+                        hrp.CFrame = CFrame.new(hrpN.Position + Vector3.new(0, 0, 4))
+                        task.wait(0.5)
+                        break
+                    end
+                end
+            end
+        end
+    end, 0.5)
+end
+function Systems.AutoQuest.Stop() ConnectionManager:Stop("AutoQuest") end
+
+--// ---------- AutoAttack ----------
+Systems.AutoAttack = {}
+function Systems.AutoAttack.Start()
+    ConnectionManager:Start("AutoAttack", function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then pcall(function() tool:Activate() end) end
+    end, 0.3)
+end
+function Systems.AutoAttack.Stop() ConnectionManager:Stop("AutoAttack") end
+
+--// ---------- BringEnemies ----------
+Systems.BringEnemies = {}
+function Systems.BringEnemies.Start()
+    ConnectionManager:Start("BringEnemies", function()
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") and Players:GetPlayerFromCharacter(m) == nil then
+                local h = m:FindFirstChildOfClass("Humanoid")
+                local target = m:FindFirstChild("HumanoidRootPart")
+                if h and target and h.Health > 0 and not target.Anchored then
+                    pcall(function()
+                        target.CFrame = hrp.CFrame * CFrame.new(
+                            math.random(-8, 8), 0, math.random(-8, 8))
+                    end)
+                end
+            end
+        end
+    end, 0.2)
+end
+function Systems.BringEnemies.Stop() ConnectionManager:Stop("BringEnemies") end
+
+--// ---------- AutoSkill ----------
+Systems.AutoSkill = {}
+function Systems.AutoSkill.Start()
+    ConnectionManager:Start("AutoSkill", function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then pcall(function() tool:Activate() end) end
+    end, 0.5)
+end
+function Systems.AutoSkill.Stop() ConnectionManager:Stop("AutoSkill") end
+
+--// ---------- FarmMaterial ----------
+Systems.FarmMaterial = {}
+function Systems.FarmMaterial.Start()
+    ConnectionManager:Start("FarmMaterial", function()
+        local mat = StateManager:Get("Select Material")
+        if not mat then return end
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        local closest, dist = nil, 300
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") and m.Name:lower():find(mat:lower()) then
+                local hrpN = m:FindFirstChild("HumanoidRootPart")
+                if hrpN then
+                    local d = Utility.Distance(hrp, hrpN)
+                    if d < dist then closest, dist = m, d end
+                end
+            end
+        end
+        if closest then
+            local t = closest:FindFirstChild("HumanoidRootPart")
+            hrp.CFrame = CFrame.new(t.Position + Vector3.new(0, 0, 5))
+        end
+    end, 0.25)
+end
+function Systems.FarmMaterial.Stop() ConnectionManager:Stop("FarmMaterial") end
+
+--// ---------- FarmBoss ----------
+Systems.FarmBoss = {}
+function Systems.FarmBoss.Start()
+    ConnectionManager:Start("FarmBoss", function()
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        local bossName = StateManager:Get("Select Boss", "All Bosses")
+        local closest, dist = nil, 500
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") then
+                local h = m:FindFirstChildOfClass("Humanoid")
+                local hrpN = m:FindFirstChild("HumanoidRootPart")
+                local n = m.Name:lower()
+                if h and hrpN and h.Health > 0 then
+                    local isBoss = n:find("boss") or (h.MaxHealth and h.MaxHealth > 500)
+                    local matches = bossName == "All Bosses" or n:find(bossName:lower())
+                    if isBoss and matches then
+                        local d = Utility.Distance(hrp, hrpN)
+                        if d < dist then closest, dist = m, d end
+                    end
+                end
+            end
+        end
+        if closest then
+            local t = closest:FindFirstChild("HumanoidRootPart")
+            hrp.CFrame = CFrame.new(t.Position + Vector3.new(0, 0, 6))
+            local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            if tool then pcall(function() tool:Activate() end) end
+        end
+    end, 0.25)
+end
+function Systems.FarmBoss.Stop() ConnectionManager:Stop("FarmBoss") end
+
+--// ---------- FarmMastery ----------
+Systems.FarmMastery = {}
+function Systems.FarmMastery.Start()
+    ConnectionManager:Start("FarmMastery", function()
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        local closest, dist = nil, 200
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") then
+                local h = m:FindFirstChildOfClass("Humanoid")
+                local hrpN = m:FindFirstChild("HumanoidRootPart")
+                if h and hrpN and h.Health > 0
+                and Players:GetPlayerFromCharacter(m) == nil then
+                    local d = Utility.Distance(hrp, hrpN)
+                    if d < dist then closest, dist = m, d end
+                end
+            end
+        end
+        if closest then
+            local t = closest:FindFirstChild("HumanoidRootPart")
+            hrp.CFrame = CFrame.new(t.Position + Vector3.new(0, 0, 5))
+            local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            if tool then pcall(function() tool:Activate() end) end
+        end
+    end, 0.25)
+end
+function Systems.FarmMastery.Stop() ConnectionManager:Stop("FarmMastery") end
+
+--// ---------- Raid ----------
+Systems.Raid = {}
+function Systems.Raid.Start()
+    ConnectionManager:Start("Raid", function()
+        -- Placeholder: adapte ao seu sistema de raid
+    end, 0.5)
+end
+function Systems.Raid.Stop() ConnectionManager:Stop("Raid") end
+
+--// ---------- SeaEvent ----------
+Systems.SeaEvent = {}
+function Systems.SeaEvent.Start()
+    ConnectionManager:Start("SeaEvent", function()
+        local hrp = Utility.GetHRP()
+        if not hrp then return end
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") then
+                local n = m.Name:lower()
+                if n:find("sea") or n:find("event") then
+                    local hrpN = m:FindFirstChild("HumanoidRootPart")
+                    if hrpN then
+                        hrp.CFrame = CFrame.new(hrpN.Position + Vector3.new(0, 5, 5))
+                        break
+                    end
+                end
+            end
+        end
+    end, 0.5)
+end
+function Systems.SeaEvent.Stop() ConnectionManager:Stop("SeaEvent") end
+
+--// ---------- Teleport ----------
+Systems.Teleport = {}
+function Systems.Teleport.GoTo(locationName)
+    local cf = Config.LocationCFrames[locationName]
+    local hrp = Utility.GetHRP()
+    if cf and hrp then
+        hrp.CFrame = cf
+    end
+end
+
+--// ---------- Player (WalkSpeed, JumpPower, Gravity, InfiniteJump, NoClip) ----------
+Systems.Player = {}
+function Systems.Player.ApplyWalkSpeed(v)
+    local h = Utility.GetHumanoid()
+    if h then h.WalkSpeed = v end
+end
+function Systems.Player.ApplyJumpPower(v)
+    local h = Utility.GetHumanoid()
+    if h then h.JumpPower = v; h.UseJumpPower = true end
+end
+function Systems.Player.ApplyGravity(v)
+    workspace.Gravity = v
+end
+function Systems.Player.StartInfiniteJump()
+    if Systems.Player._jumpConn then return end
+    Systems.Player._jumpConn = UserInputService.JumpRequest:Connect(function()
+        if not StateManager:Get("Infinite Jump", false) then return end
+        local h = Utility.GetHumanoid()
+        if h then
+            pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
+        end
+    end)
+end
+function Systems.Player.StopInfiniteJump()
+    if Systems.Player._jumpConn then
+        Systems.Player._jumpConn:Disconnect()
+        Systems.Player._jumpConn = nil
+    end
+end
+function Systems.Player.StartNoClip()
+    ConnectionManager:Start("NoClip", function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then
+                p.CanCollide = false
+            end
+        end
+    end, 0.2)
+end
+function Systems.Player.StopNoClip()
+    ConnectionManager:Stop("NoClip")
+    local char = LocalPlayer.Character
+    if char then
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = true end
+        end
+    end
+end
+
+--// ---------- ESP ----------
+Systems.ESP = {}
+Systems.ESP._objects = {}
+
+function Systems.ESP._create(part, color, text)
+    if not part or not part:IsA("BasePart") then return end
+    if Systems.ESP._objects[part] then return end
+    local bb = Utility.Create("BillboardGui", {
+        Parent = part,
+        Size = UDim2.new(0, 60, 0, 20),
+        AlwaysOnTop = true,
+        StudsOffset = Vector3.new(0, 3, 0),
+        Name = "redzESP",
+    })
+    Utility.Create("TextLabel", {
+        Parent = bb,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = Config.Theme.FontBold,
+        Text = text or part.Parent.Name,
+        TextColor3 = color,
+        TextSize = 10,
+        TextStrokeTransparency = 0.3,
+        TextStrokeColor3 = Color3.new(0, 0, 0),
+    })
+    Systems.ESP._objects[part] = bb
+end
+
+function Systems.ESP.Clear()
+    for part, gui in pairs(Systems.ESP._objects) do
+        if gui and gui.Parent then gui:Destroy() end
+    end
+    Systems.ESP._objects = {}
+end
+
+function Systems.ESP.Start(category, color, filter)
+    local loopName = "ESP_" .. category
+    ConnectionManager:Start(loopName, function()
+        for _, m in ipairs(workspace:GetDescendants()) do
+            if m:IsA("Model") and m ~= LocalPlayer.Character then
+                local hrp = m:FindFirstChild("HumanoidRootPart")
+                local h = m:FindFirstChildOfClass("Humanoid")
+                if hrp and h and h.Health > 0 and filter(m) then
+                    Systems.ESP._create(hrp, color, m.Name)
+                end
+            end
+        end
+    end, 0.5)
+end
+
+function Systems.ESP.Stop(category)
+    ConnectionManager:Stop("ESP_" .. category)
+end
+
+--// ============================================================
+--// REGISTRA TODOS OS SISTEMAS NO HUB CONTROLLER
+--// ============================================================
+HubController:Register("FarmLevel",    Systems.FarmLevel)
+HubController:Register("FarmChest",    Systems.FarmChest)
+HubController:Register("AutoQuest",    Systems.AutoQuest)
+HubController:Register("AutoAttack",   Systems.AutoAttack)
+HubController:Register("BringEnemies", Systems.BringEnemies)
+HubController:Register("AutoSkill",    Systems.AutoSkill)
+HubController:Register("FarmMaterial", Systems.FarmMaterial)
+HubController:Register("FarmBoss",     Systems.FarmBoss)
+HubController:Register("FarmMastery",  Systems.FarmMastery)
+HubController:Register("Raid",         Systems.Raid)
+HubController:Register("SeaEvent",     Systems.SeaEvent)
+
+--// ============================================================
+--// INICIALIZA A UI E PREENCHE AS ABAS
+--// ============================================================
+local UI = MainUI.Build()
+local P = UI.Pages
+
+-- ---------- Aba: Info & Server ----------
+do
+    local page = P["Info & Server"]
+    Section.Create(page, "SERVER INFO")
+    local l1 = Utility.Create("TextLabel", {
+        Parent = page, BackgroundColor3 = Config.Theme.Element,
+        BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 24),
+        Font = Config.Theme.Font, Text = "  Player: " .. LocalPlayer.Name,
+        TextColor3 = Config.Theme.TextDim, TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    Utility.Corner(l1, 6); Utility.Stroke(l1, Config.Theme.Border, 1, 0.6)
+
+    local l2 = Utility.Create("TextLabel", {
+        Parent = page, BackgroundColor3 = Config.Theme.Element,
+        BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 24),
+        Font = Config.Theme.Font, Text = "  Server: " .. game.JobId:sub(1, 8),
+        TextColor3 = Config.Theme.TextDim, TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    Utility.Corner(l2, 6); Utility.Stroke(l2, Config.Theme.Border, 1, 0.6)
+
+    Button.Create(page, "Copy Job ID", function()
+        if setclipboard then setclipboard(game.JobId) end
+    end)
+end
+
+-- ---------- Aba: Tab Farming ----------
+do
+    local page = P["Tab Farming"]
+    Section.Create(page, "AUTO FARM")
+    Toggle.Create(page, "Auto Farm Level", false, function(v)
+        if v then HubController:Start("FarmLevel") else HubController:Stop("FarmLevel") end
+    end)
+    Toggle.Create(page, "Auto Farm Chest", false, function(v)
+        if v then HubController:Start("FarmChest") else HubController:Stop("FarmChest") end
+    end)
+    Toggle.Create(page, "Auto Quest", false, function(v)
+        if v then HubController:Start("AutoQuest") else HubController:Stop("AutoQuest") end
+    end)
+    Toggle.Create(page, "Auto Attack", false, function(v)
+        if v then HubController:Start("AutoAttack") else HubController:Stop("AutoAttack") end
+    end)
+    Toggle.Create(page, "Bring Enemies", false, function(v)
+        if v then HubController:Start("BringEnemies") else HubController:Stop("BringEnemies") end
+    end)
+    Toggle.Create(page, "Auto Skill", false, function(v)
+        if v then HubController:Start("AutoSkill") else HubController:Stop("AutoSkill") end
+    end)
+    Toggle.Create(page, "Auto Collect", false)
+
+    Section.Create(page, "FARM EXTRA")
+    Toggle.Create(page, "Farm Material", false, function(v)
+        if v then HubController:Start("FarmMaterial") else HubController:Stop("FarmMaterial") end
+    end)
+    Dropdown.Create(page, "Select Material", Config.Materials, function() end)
+    Toggle.Create(page, "Farm Boss", false, function(v)
+        if v then HubController:Start("FarmBoss") else HubController:Stop("FarmBoss") end
+    end)
+    Dropdown.Create(page, "Select Boss", Config.Bosses, function() end)
+    Toggle.Create(page, "Farm Mastery", false, function(v)
+        if v then HubController:Start("FarmMastery") else HubController:Stop("FarmMastery") end
+    end)
+
+    Section.Create(page, "FRUIT & RAID")
+    Toggle.Create(page, "Auto Store Fruit", false)
+    Toggle.Create(page, "Auto Random Fruit", false)
+    Toggle.Create(page, "Auto Raid", false, function(v)
+        if v then HubController:Start("Raid") else HubController:Stop("Raid") end
+    end)
+end
+
+-- ---------- Aba: Stack Farm ----------
+do
+    local page = P["Stack Farm"]
+    Section.Create(page, "STACK FARM")
+    Toggle.Create(page, "Stack Enemies", false)
+    Toggle.Create(page, "Stack Chests", false)
+    Toggle.Create(page, "Stack Items", false)
+    Slider.Create(page, "Stack Range", 10, 200, 60, function() end)
+end
+
+-- ---------- Aba: Farm Mastery ----------
+do
+    local page = P["Farm Mastery"]
+    Section.Create(page, "MASTERY FARM")
+    Toggle.Create(page, "Fruit Mastery", false, function(v)
+        if v then HubController:Start("FarmMastery") else HubController:Stop("FarmMastery") end
+    end)
+    Toggle.Create(page, "Gun Mastery", false, function(v)
+        if v then HubController:Start("FarmMastery") else HubController:Stop("FarmMastery") end
+    end)
+    Toggle.Create(page, "Sword Mastery", false, function(v)
+        if v then HubController:Start("FarmMastery") else HubController:Stop("FarmMastery") end
+    end)
+    Dropdown.Create(page, "Mastery Target", { "Nearest", "Weakest", "Strongest" }, function() end)
+end
+
+-- ---------- Aba: Sea Event ----------
+do
+    local page = P["Sea Event"]
+    Section.Create(page, "SEA EVENT")
+    Toggle.Create(page, "Auto Sea Event", false, function(v)
+        if v then HubController:Start("SeaEvent") else HubController:Stop("SeaEvent") end
+    end)
+    Toggle.Create(page, "Auto Attack Event", false)
+    Toggle.Create(page, "Auto Collect Drop", false)
+end
+
+-- ---------- Aba: Upgrade V4 ----------
+do
+    local page = P["Upgrade V4"]
+    Section.Create(page, "UPGRADE V4")
+    Toggle.Create(page, "Auto Upgrade V4", false)
+    Toggle.Create(page, "Auto Collect Materials", false)
+    Toggle.Create(page, "Auto Craft", false)
+    Button.Create(page, "Upgrade Now", function() end)
+end
+
+-- ---------- Aba: Dojo & Drago Race ----------
+do
+    local page = P["Dojo & Drago Race"]
+    Section.Create(page, "DOJO & RACE")
+    Toggle.Create(page, "Auto Dojo", false)
+    Toggle.Create(page, "Auto Drago Race", false)
+    Toggle.Create(page, "Auto Complete Race", false)
+end
+
+-- ---------- Aba: Get Item & Upgrade ----------
+do
+    local page = P["Get Item & Upgrade"]
+    Section.Create(page, "ITEMS")
+    Dropdown.Create(page, "Select Item", { "Sword", "Gun", "Fruit", "Accessory" }, function() end)
+    Toggle.Create(page, "Auto Get Item", false)
+    Toggle.Create(page, "Auto Upgrade Item", false)
+    Button.Create(page, "Get Item Now", function() end)
+end
+
+-- ---------- Aba: Raid & Fruit ----------
+do
+    local page = P["Raid & Fruit"]
+    Section.Create(page, "RAID")
+    Toggle.Create(page, "Auto Raid", false, function(v)
+        if v then HubController:Start("Raid") else HubController:Stop("Raid") end
+    end)
+    Toggle.Create(page, "Auto Start Raid", false)
+    Toggle.Create(page, "Auto Complete Raid", false)
+    Section.Create(page, "FRUIT")
+    Toggle.Create(page, "Auto Store Fruit", false)
+    Toggle.Create(page, "Auto Random Fruit", false)
+    Toggle.Create(page, "Auto Buy Fruit", false)
+end
+
+-- ---------- Aba: Local Player ----------
+do
+    local page = P["Local Player"]
+    Section.Create(page, "CHARACTER")
+    Slider.Create(page, "WalkSpeed", 16, 300, 16, function(v)
+        Systems.Player.ApplyWalkSpeed(v)
+    end)
+    Slider.Create(page, "JumpPower", 50, 500, 50, function(v)
+        Systems.Player.ApplyJumpPower(v)
+    end)
+    Slider.Create(page, "Gravity", 0, 200, 196, function(v)
+        Systems.Player.ApplyGravity(v)
+    end)
+    Toggle.Create(page, "Infinite Jump", false, function(v)
+        if v then Systems.Player.StartInfiniteJump()
+        else Systems.Player.StopInfiniteJump() end
+    end)
+    Toggle.Create(page, "NoClip", false, function(v)
+        if v then Systems.Player.StartNoClip()
+        else Systems.Player.StopNoClip() end
+    end)
+end
+
+-- ---------- Aba: Local Shop ----------
+do
+    local page = P["Local Shop"]
+    Section.Create(page, "SHOP")
+    Dropdown.Create(page, "Select Item", { "Item1", "Item2", "Item3", "Item4" }, function() end)
+    Toggle.Create(page, "Auto Buy", false)
+end
+
+-- ---------- Aba: Stats & ESP ----------
+do
+    local page = P["Stats & ESP"]
+    Section.Create(page, "ESP")
+    Toggle.Create(page, "ESP Players", false, function(v)
+        if v then Systems.ESP.Start("Players", Color3.fromRGB(80, 200, 255), function(m)
+            return Players:GetPlayerFromCharacter(m) ~= nil
+        end) else Systems.ESP.Stop("Players") end
+    end)
+    Toggle.Create(page, "ESP NPCs", false, function(v)
+        if v then Systems.ESP.Start("NPCs", Color3.fromRGB(255, 200, 80), function(m)
+            return Players:GetPlayerFromCharacter(m) == nil
+        end) else Systems.ESP.Stop("NPCs") end
+    end)
+    Toggle.Create(page, "ESP Enemies", false, function(v)
+        if v then Systems.ESP.Start("Enemies", Color3.fromRGB(255, 80, 80), function(m)
+            local h = m:FindFirstChildOfClass("Humanoid")
+            return h and h.Health > 0
+        end) else Systems.ESP.Stop("Enemies") end
+    end)
+    Toggle.Create(page, "ESP Chests", false)
+    Toggle.Create(page, "ESP Items", false)
+    Button.Create(page, "Clear ESP", Systems.ESP.Clear)
+end
+
+-- ---------- Aba: Tab Teleport ----------
+do
+    local page = P["Tab Teleport"]
+    Section.Create(page, "TELEPORT")
+    Dropdown.Create(page, "Select Location", Config.Locations, function(opt)
+        Systems.Teleport.GoTo(opt)
+    end)
+    Button.Create(page, "Teleport to Spawn", function()
+        Systems.Teleport.GoTo("Spawn")
+    end)
+end
+
+-- ---------- Aba: Setting & UI ----------
+do
+    local page = P["Setting & UI"]
+    Section.Create(page, "UI")
+    Toggle.Create(page, "UI Toggle", true, function(v)
+        UI.Main.Visible = v
+    end)
+    Slider.Create(page, "UI Scale", 50, 150, 100, function(v)
+        local scale = UI.Main:FindFirstChildOfClass("UIScale")
+        if scale then scale.Scale = v / 100 end
+    end)
+    Slider.Create(page, "Transparency", 0, 100, 8, function(v)
+        UI.Main.BackgroundTransparency = v / 100
+    end)
+    Toggle.Create(page, "FPS Display", false)
+
+    Section.Create(page, "SERVER")
+    Button.Create(page, "Rejoin", function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end)
+    Button.Create(page, "Server Hop", function()
+        local Http = game:GetService("HttpService")
+        local ok, res = pcall(function()
+            return Http:JSONDecode(game:HttpGet(
+                "https://games.roblox.com/v1/games/" .. game.PlaceId ..
+                "/servers/Public?limit=100"))
+        end)
+        if ok and res and res.data then
+            for _, s in ipairs(res.data) do
+                if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(
+                        game.PlaceId, s.id, LocalPlayer)
+                    return
+                end
+            end
+        end
+    end)
+end
+
+-- ---------- Abre a primeira aba ----------
+UI.SwitchPage("Tab Farming")
+do
+    local firstBtn = UI.Sidebar.Frame
+        :FindFirstChild("ScrollingFrame", true)
+    -- aplica visual selecionado manualmente
+    for _, b in ipairs(UI.Sidebar.Buttons) do
+        if b.Name == "Tab Farming" then
+            b.BackgroundTransparency = 0.4
+            b.TextColor3 = Config.Theme.Text
+            local ind = b:FindFirstChild("Indicator")
+            if ind then ind.Visible = true end
+            break
+        end
+    end
+end
+
+--// FPS Display
+do
+    local fpsLabel = Utility.Create("TextLabel", {
+        Parent = UI.ScreenGui,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -100, 1, -24),
+        Size = UDim2.new(0, 90, 0, 18),
+        Font = Config.Theme.FontBold,
+        Text = "FPS: 60",
+        TextColor3 = Config.Theme.Accent,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Visible = false,
+    })
+    local frames, last = 0, tick()
+    RunService.RenderStepped:Connect(function()
+        frames = frames + 1
+        if tick() - last >= 1 then
+            fpsLabel.Text = "FPS: " .. frames
+            frames = 0
+            last = tick()
+        end
+        fpsLabel.Visible = StateManager:Get("FPS Display", false) or false
+    end)
+end
+
+--// Notificação final
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = Config.HubName,
+        Text  = "Carregado com sucesso! by tsread",
+        Duration = 4,
+    })
+end)
+
+print("[redz Hub v2] Carregado!")
